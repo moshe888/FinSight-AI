@@ -1,208 +1,200 @@
-import { Component, signal, ViewChild, ElementRef, ChangeDetectionStrategy, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { Component, ChangeDetectionStrategy, signal, inject, ElementRef, ViewChild, AfterViewChecked } from '@angular/core';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
-
-interface Message {
-  role: 'user' | 'ai';
-  content: string;
-  timestamp: Date;
-}
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, FormsModule, HttpClientModule],
-  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [CommonModule, HttpClientModule],
   template: `
-    <div class="min-h-screen bg-slate-50 text-slate-900 font-sans flex flex-col" dir="rtl">
-      <!-- Header -->
-      <header class="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center sticky top-0 z-10 shadow-sm">
+    <div class="min-h-screen bg-slate-50 text-slate-900 font-sans flex flex-col" dir="ltr">
+      <!-- Navbar -->
+      <nav class="bg-white border-b border-slate-200 px-8 py-4 flex justify-between items-center shadow-sm">
         <div class="flex items-center gap-2">
-          <div class="bg-blue-600 p-2 rounded-lg shadow-blue-200 shadow-lg">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div class="bg-blue-600 p-2 rounded-lg text-white shadow-lg shadow-blue-100">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
           </div>
           <h1 class="text-xl font-bold tracking-tight text-slate-800">FinSight <span class="text-blue-600">AI</span></h1>
         </div>
         <div class="flex items-center gap-4">
-          <span class="hidden md:inline text-xs font-medium px-2 py-1 bg-green-100 text-green-700 rounded-full">מנוע RAG פעיל</span>
-          <div class="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600 border border-slate-300">JD</div>
+          <span class="hidden sm:inline-block text-xs font-semibold px-2 py-1 bg-green-100 text-green-700 rounded-md">
+            RAG Engine Active
+          </span>
+          <div class="w-8 h-8 rounded-full bg-slate-200 border border-slate-300 flex items-center justify-center text-xs font-bold text-slate-600">JD</div>
         </div>
-      </header>
+      </nav>
 
-      <main class="max-w-6xl mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1 w-full">
+      <main class="max-w-7xl mx-auto w-full p-4 md:p-6 grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1 overflow-hidden">
         
-        <!-- Sidebar: Upload & Actions -->
-        <div class="lg:col-span-1 space-y-6">
-          <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
-            <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">ניהול מסמכים</h2>
+        <!-- Sidebar -->
+        <div class="lg:col-span-1 space-y-4 overflow-y-auto">
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm transition-all hover:shadow-md">
+            <h2 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Document Management</h2>
             
             <div 
-              class="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center hover:border-blue-400 transition-all cursor-pointer group bg-slate-50 hover:bg-white"
+              class="group border-2 border-dashed border-slate-200 rounded-xl p-6 text-center hover:border-blue-400 hover:bg-blue-50/30 transition-all cursor-pointer"
               (click)="fileInput.click()">
               <input #fileInput type="file" class="hidden" (change)="onFileSelected($event)" accept=".pdf">
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 mx-auto text-slate-400 group-hover:text-blue-500 mb-2 transition-transform group-hover:-translate-y-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 mx-auto text-slate-300 group-hover:text-blue-500 mb-2 transition-transform group-hover:-translate-y-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
               </svg>
-              <p class="text-sm font-semibold text-slate-700">לחץ להעלאת PDF</p>
-              <p class="text-xs text-slate-400 mt-1">דוחות רבעוניים או שנתיים</p>
+              <p class="text-sm font-semibold text-slate-700">Upload Financial PDF</p>
+              <p class="text-[10px] text-slate-400 mt-1">Drag & drop or click to browse</p>
             </div>
 
             @if (selectedFile()) {
-              <div class="mt-4 p-3 bg-blue-50 border border-blue-100 rounded-lg animate-fade-in">
-                <div class="flex items-center gap-3">
-                  <div class="p-2 bg-blue-600 rounded text-white">
+              <div class="mt-4 p-3 bg-blue-50 border border-blue-100 rounded-xl animate-in fade-in slide-in-from-top-2 duration-300">
+                <div class="flex items-center gap-2 mb-3">
+                  <div class="p-1.5 bg-blue-600 rounded text-white shrink-0">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                   </div>
-                  <div class="flex-1 overflow-hidden">
-                    <p class="text-sm font-bold text-blue-900 truncate">{{ selectedFile()?.name }}</p>
-                    <p class="text-[10px] text-blue-600 font-bold uppercase tracking-tighter">מוכן לעיבוד</p>
-                  </div>
+                  <span class="text-xs font-bold text-blue-900 truncate flex-1">{{ selectedFile()?.name }}</span>
                 </div>
                 <button 
-                  (click)="uploadAndProcess()" 
+                  (click)="upload()" 
                   [disabled]="isUploading()"
-                  class="w-full mt-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition-colors disabled:opacity-50">
-                  {{ isUploading() ? 'מעבד מסמך...' : 'התחל ניתוח RAG' }}
+                  class="w-full py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-colors">
+                  {{ isUploading() ? 'Processing...' : 'Index & Start Analysis' }}
                 </button>
-              </div>
-            }
-
-            @if (isReady()) {
-              <div class="mt-4 p-3 bg-green-50 border border-green-100 rounded-lg flex items-center gap-2 animate-fade-in">
-                <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <p class="text-xs font-bold text-green-700">המסמך אונדקס בהצלחה</p>
               </div>
             }
           </div>
 
-          <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
-            <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">תובנות מהירות</h2>
-            <ul class="space-y-2">
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+            <h2 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Quick Insights</h2>
+            <div class="space-y-2">
               @for (suggestion of suggestions; track suggestion) {
-                <li>
-                  <button 
-                    (click)="useSuggestion(suggestion)"
-                    [disabled]="!isReady()"
-                    class="w-full text-right text-xs p-2.5 rounded-xl hover:bg-blue-50 text-slate-600 border border-slate-100 hover:border-blue-200 transition-all disabled:opacity-30 disabled:hover:bg-transparent">
-                    {{ suggestion }}
-                  </button>
-                </li>
+                <button 
+                  (click)="setQueryFromSuggestion(suggestion)"
+                  [disabled]="!isIndexed()"
+                  class="w-full text-left text-[11px] p-2.5 rounded-xl border border-slate-100 text-slate-600 hover:bg-slate-50 hover:border-blue-200 transition-all disabled:opacity-30 disabled:hover:bg-transparent">
+                  {{ suggestion }}
+                </button>
               }
-            </ul>
+            </div>
           </div>
         </div>
 
-        <!-- Main: Chat Interface -->
-        <div class="lg:col-span-3 flex flex-col h-[600px] md:h-auto">
-          <div class="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
-            
-            <!-- Chat Messages -->
-            <div #scrollContainer class="flex-1 overflow-y-auto p-6 space-y-6 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:20px_20px]">
-              @if (chatHistory().length === 0) {
-                <div class="h-full flex flex-col items-center justify-center text-center">
-                  <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                    </svg>
-                  </div>
-                  <h3 class="text-lg font-bold text-slate-700">מערכת FinSight AI מוכנה</h3>
-                  <p class="text-sm text-slate-500 max-w-xs mx-auto mt-2">העלה דוח כספי ב-PDF בצד ימין כדי להתחיל בתשאול הנתונים.</p>
-                </div>
-              }
-
-              @for (msg of chatHistory(); track msg.timestamp) {
-                <div [class]="msg.role === 'user' ? 'flex justify-end' : 'flex justify-start'">
-                  <div [class]="msg.role === 'user' 
-                    ? 'bg-blue-600 text-white rounded-2xl rounded-tr-none px-4 py-3 max-w-[85%] shadow-md shadow-blue-100' 
-                    : 'bg-white text-slate-800 rounded-2xl rounded-tl-none px-4 py-3 max-w-[85%] border border-slate-200 shadow-sm'">
-                    <p class="text-sm leading-relaxed whitespace-pre-wrap">{{ msg.content }}</p>
-                    <div class="flex items-center gap-1 mt-2 opacity-50 text-[10px]">
-                      <span>{{ msg.role === 'user' ? 'אתה' : 'FinSight AI' }}</span>
-                      <span>•</span>
-                      <span>{{ msg.timestamp | date:'HH:mm' }}</span>
-                    </div>
-                  </div>
-                </div>
-              }
-
-              @if (isProcessing()) {
-                <div class="flex justify-start">
-                  <div class="bg-white rounded-2xl rounded-tl-none px-4 py-3 border border-slate-200 shadow-sm">
-                    <div class="flex gap-1">
-                      <div class="w-2 h-2 bg-blue-600 rounded-full animate-bounce"></div>
-                      <div class="w-2 h-2 bg-blue-600 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                      <div class="w-2 h-2 bg-blue-600 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                    </div>
-                  </div>
-                </div>
-              }
-            </div>
-
-            <!-- Input Area -->
-            <div class="p-4 bg-slate-50 border-t border-slate-200">
-              <div class="relative flex items-center bg-white rounded-xl shadow-sm border border-slate-200 focus-within:ring-2 focus-within:ring-blue-500 transition-all">
-                <textarea 
-                  [(ngModel)]="rawInput"
-                  (keydown.enter)="$event.preventDefault(); sendMessage()"
-                  placeholder="שאל שאלה על נתוני הדוח..."
-                  rows="1"
-                  class="w-full bg-transparent py-3 px-4 pr-12 focus:outline-none resize-none min-h-[50px] max-h-[150px] text-right"
-                  [disabled]="!isReady() || isProcessing()"
-                ></textarea>
-                <button 
-                  (click)="sendMessage()"
-                  [disabled]="!rawInput.trim() || isProcessing() || !isReady()"
-                  class="absolute left-2 p-2 bg-blue-600 text-white rounded-lg disabled:opacity-30 transition-all hover:bg-blue-700 active:scale-95">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+        <!-- Chat Area -->
+        <div class="lg:col-span-3 flex flex-col bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden min-h-[500px] lg:h-full">
+          <!-- Messages Box -->
+          <div #chatBox class="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 bg-slate-50/30">
+            @if (messages().length === 0) {
+              <div class="h-full flex flex-col items-center justify-center text-center opacity-40 select-none">
+                <div class="p-4 bg-slate-100 rounded-full mb-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
                   </svg>
-                </button>
+                </div>
+                <h3 class="text-lg font-bold text-slate-700">How can I help you?</h3>
+                <p class="text-xs text-slate-500 max-w-xs mt-2">Upload a financial PDF report and ask questions about revenue, risks, or outlook.</p>
               </div>
-              <p class="text-[10px] text-center text-slate-400 mt-3 font-medium tracking-tight">
-                מופעל על ידי GPT-4o & FAISS Vector Engine
-              </p>
+            }
+
+            @for (msg of messages(); track $index) {
+              <div [class]="msg.role === 'user' ? 'flex justify-end' : 'flex justify-start'" class="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div [class]="msg.role === 'user' 
+                  ? 'bg-blue-600 text-white rounded-2xl rounded-tr-none px-4 py-3 max-w-[85%] shadow-md shadow-blue-100' 
+                  : 'bg-white text-slate-800 rounded-2xl rounded-tl-none px-4 py-3 max-w-[85%] border border-slate-200 shadow-sm'">
+                  <p class="text-sm leading-relaxed whitespace-pre-wrap">{{ msg.text }}</p>
+                  <div class="mt-2 flex items-center gap-1.5 opacity-60 text-[9px] uppercase tracking-tighter">
+                    <span>{{ msg.role === 'user' ? 'You' : 'FinSight AI' }}</span>
+                    <span>•</span>
+                    <span>{{ msg.time }}</span>
+                  </div>
+                </div>
+              </div>
+            }
+
+            @if (isAsking()) {
+              <div class="flex justify-start animate-pulse">
+                <div class="bg-white border border-slate-200 rounded-2xl rounded-tl-none px-4 py-3 flex gap-1 items-center">
+                  <div class="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                  <div class="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                  <div class="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce"></div>
+                </div>
+              </div>
+            }
+          </div>
+
+          <!-- Input Controls -->
+          <div class="p-4 bg-white border-t border-slate-100">
+            <div class="relative flex items-center group">
+              <input 
+                #queryInput
+                [value]="queryText()"
+                (input)="updateQueryText(queryInput.value)"
+                (keyup.enter)="ask()"
+                [disabled]="!isIndexed() || isAsking()"
+                type="text"
+                placeholder="Ask a question about the report..."
+                class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3.5 px-5 pl-4 pr-14 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+              
+              <button 
+                (click)="ask()"
+                [disabled]="!queryText().trim() || !isIndexed() || isAsking()"
+                class="absolute right-2.5 p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-all shadow-md active:scale-95 shadow-blue-100">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+              </button>
             </div>
+            <p class="text-[9px] text-center text-slate-400 mt-3 font-medium uppercase tracking-wider">
+              Powered by RAG Engine • GPT-4o • FAISS
+            </p>
           </div>
         </div>
       </main>
     </div>
-  `
+  `,
+  styles: [`
+    :host { display: block; height: 100vh; }
+  `],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class App {
-  // Use inject() instead of constructor injection to avoid decorator metadata issues in ES2015 target
+export class App implements AfterViewChecked {
   private http = inject(HttpClient);
-  private apiBaseUrl = 'http://localhost:8000';
+  private api = 'http://localhost:8000';
 
-  @ViewChild('scrollContainer') scrollContainer!: ElementRef;
+  @ViewChild('chatBox') chatBox!: ElementRef;
 
-  chatHistory = signal<Message[]>([]);
-  isProcessing = signal(false);
-  isUploading = signal(false);
+  // Signals for Reactive State
   selectedFile = signal<File | null>(null);
-  isReady = signal(false);
-  rawInput = '';
+  isUploading = signal(false);
+  isIndexed = signal(false);
+  isAsking = signal(false);
+  queryText = signal('');
+  messages = signal<{role: 'user' | 'ai', text: string, time: string}[]>([]);
 
   suggestions = [
-    "מה היה אחוז הצמיחה בהכנסות?",
-    "מהם סיכוני השוק המרכזיים שצוינו?",
-    "סכם את נקודות המפתח מדברי המנכ״ל",
-    "מהי תחזית הרווח לשנה הבאה?"
+    "What was the revenue growth percentage?",
+    "Summarize the key points from the CEO statement.",
+    "What are the main market risks mentioned?",
+    "What is the EBITDA for the last quarter?"
   ];
 
   onFileSelected(event: Event) {
     const input = event.target as HTMLInputElement;
     if (input.files?.length) {
       this.selectedFile.set(input.files[0]);
-      this.isReady.set(false);
+      this.isIndexed.set(false);
     }
   }
 
-  uploadAndProcess() {
+  updateQueryText(val: string) {
+    this.queryText.set(val);
+  }
+
+  setQueryFromSuggestion(val: string) {
+    this.queryText.set(val);
+    this.ask();
+  }
+
+  upload() {
     const file = this.selectedFile();
     if (!file) return;
 
@@ -210,57 +202,55 @@ export class App {
     const formData = new FormData();
     formData.append('file', file);
 
-    this.http.post(`${this.apiBaseUrl}/upload`, formData).subscribe({
-      next: (res: any) => {
+    this.http.post(`${this.api}/upload`, formData).subscribe({
+      next: () => {
         this.isUploading.set(false);
-        this.isReady.set(true);
-        this.addMessage('ai', `המסמך "${file.name}" עובד בהצלחה. המידע זמין כעת לשאילתות.`);
+        this.isIndexed.set(true);
+        this.addMessage('ai', `The report "${file.name}" has been indexed. I am ready to analyze the data.`);
       },
       error: (err) => {
         this.isUploading.set(false);
-        this.addMessage('ai', 'שגיאה בעיבוד המסמך. וודא ששרת ה-Backend פועל ושה-API Key מוגדר.');
+        this.addMessage('ai', 'Error processing file. Ensure the backend is running on port 8000.');
+        console.error('Upload error:', err);
       }
     });
   }
 
-  sendMessage() {
-    const text = this.rawInput.trim();
-    if (!text || this.isProcessing() || !this.isReady()) return;
+  ask() {
+    const q = this.queryText().trim();
+    if (!q || !this.isIndexed() || this.isAsking()) return;
+    
+    this.addMessage('user', q);
+    this.queryText.set('');
+    this.isAsking.set(true);
 
-    this.addMessage('user', text);
-    this.rawInput = '';
-    this.isProcessing.set(true);
-
-    this.http.get<any>(`${this.apiBaseUrl}/query`, { params: { question: text } }).subscribe({
+    this.http.get<{answer: string}>(`${this.api}/query`, { params: { question: q } }).subscribe({
       next: (res) => {
+        this.isAsking.set(false);
         this.addMessage('ai', res.answer);
-        this.isProcessing.set(false);
-        this.scrollToBottom();
       },
       error: (err) => {
-        this.isProcessing.set(false);
-        this.addMessage('ai', 'מצטער, חלה שגיאה בתקשורת עם מנוע הבינה המלאכותית.');
+        this.isAsking.set(false);
+        this.addMessage('ai', 'Sorry, there was an error fetching data. Is the backend active?');
+        console.error('Query error:', err);
       }
     });
   }
 
-  useSuggestion(suggestion: string) {
-    this.rawInput = suggestion;
-    this.sendMessage();
+  private addMessage(role: 'user' | 'ai', text: string) {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    this.messages.update(m => [...m, { role, text, time: timeStr }]);
   }
 
-  private addMessage(role: 'user' | 'ai', content: string) {
-    const newMsg: Message = { role, content, timestamp: new Date() };
-    this.chatHistory.update(prev => [...prev, newMsg]);
+  ngAfterViewChecked(): void {
     this.scrollToBottom();
   }
 
   private scrollToBottom() {
-    setTimeout(() => {
-      const el = this.scrollContainer?.nativeElement;
-      if (el) {
-        el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
-      }
-    }, 100);
+    if (this.chatBox) {
+      const el = this.chatBox.nativeElement;
+      el.scrollTop = el.scrollHeight;
+    }
   }
 }
